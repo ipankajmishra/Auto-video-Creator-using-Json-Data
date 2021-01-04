@@ -1,7 +1,9 @@
 import { Component } from "react";
-import { CanvasJSChart, CanvasJS } from "canvasjs-react-charts";
-import html2canvas from "html2canvas";
 import { dataStore } from "./data.json";
+import Chart from "react-apexcharts";
+import * as htmlToImage from 'html-to-image';
+import { toPng, toJpeg, toBlob, toPixelData, toSvg } from 'html-to-image';
+import download from "downloadjs";
 class App extends Component {
   constructor(props) {
     super(props);
@@ -10,35 +12,36 @@ class App extends Component {
       currentYear: "",
       optionsArray: [],
       optionsArray2: [],
+      optionsArray3: [
+        {
+          categories: [],
+          data: [],
+        },
+      ],
+      lengtharray: 0,
     };
   }
   showGraphs() {
     this.setState({ optionsArray2: this.state.optionsArray });
   }
 
-  saveAsImage(data) {
-    this.setState({ dataPoints: data }, () => {
-      var container = document.getElementById("chartContainer"); // full page
-      html2canvas(container, { allowTaint: true }).then(function (canvas) {
-        var link = document.createElement("a");
-        document.body.appendChild(link);
-        link.download = "html_image.jpg";
-        link.href = canvas.toDataURL();
-        link.target = "_blank";
-        link.click();
-        // this.wait(3000);
-        this.setState({
-          dataPoints: [],
-        });
+  saveAsImage(id) {
+    htmlToImage.toPng(document.getElementById(id))
+      .then(function (dataUrl) {
+        download(dataUrl, 'my-node.png');
       });
-    });
   }
 
   componentDidMount() {
-    console.log(dataStore);
+    this.setState({
+      lengtharray: dataStore.length,
+    });
+
 
     for (let i in dataStore) {
-      console.log(dataStore[i]);
+
+      let xaxisData = [];
+      let yaxisData = [];
       let dataPoint = [];
       let data = dataStore[i];
       for (let key in data) {
@@ -48,89 +51,88 @@ class App extends Component {
             obj["y"] = data[key];
             obj["label"] = key;
             dataPoint.push(obj);
+            xaxisData[xaxisData.length] = data[key];
+            yaxisData[yaxisData.length] = key;
           }
         }
       }
+      let categoriesDataObj = {};
+      categoriesDataObj["categories"] = yaxisData;
+      categoriesDataObj["data"] = xaxisData;
       let array = this.state.optionsArray;
+      let arr = this.state.optionsArray3;
+      arr[arr.length] = categoriesDataObj;
       array.push(dataPoint);
-      this.setState({ optionsArray: array });
-      //   this.setState({dataPoints: dataPoint},()=>{
-      //   this.saveAsImage(dataPoint);
-      //   this.wait(3000);
-      //   this.setState({dataPoints:[]},()=>{
-      // console.log(dataPoint);
-      // dataPoint = [];
-      // console.log(dataPoint);
-      //   });
-      // console.log(this.state.dataPoints, this.state.currentYear);
-      // console.log("before");
-      // // this.wait(5000);
-      // console.log("after");
-      //   });
+      this.setState({ optionsArray: array, optionsArray3: arr });
+
+
+      this.showGraphs();
     }
   }
 
-  wait(ms) {
-    var start = new Date().getTime();
-    var end = start;
-    while (end < start + ms) {
-      end = new Date().getTime();
+  clickAll(key) {
+
+    var el = document.getElementsByClassName('exportPNG');
+
+    for (let i = 0; i < el.length; i++) {
+      el[i].click();
     }
   }
 
-  render() {
-    
-    const mapData = this.state.optionsArray2.map((data, key) => {
+wait(ms) {
+  var start = new Date().getTime();
+  var end = start;
+  while (end < start + ms) {
+    end = new Date().getTime();
+  }
+}
+
+render() {
+  const mapData =
+    this.state.lengtharray !== 0 &&
+    this.state.optionsArray3.map((data, key) => {
       let options = {
-        animationEnabled: false,
-        theme: "light2",
-        title: {
-          text: "Most Popular Web Browsers",
+        chart: {
+          id: "basic-bar",
         },
-        culture: "es",
-        axisX: {
-          title: "Web Browsers",
-          reversed: true,
-          // labelAngle: -70,
-          interval: 1,
-        },
-        axisY: {
-          title: "Monthly Active Users % in " + key,
-          includeZero: true,
-          interval: 10,
-          maximum: 100,
-          minimum: 0,
-        },
-        data: [
-          {
-            type: "bar",
-            dataPoints: data,
+        plotOptions: {
+          bar: {
+            horizontal: true,
           },
-        ],
+        },
+        xaxis: {
+          categories: data.categories,
+        },
       };
+      let series = [
+        {
+          name: "User % ",
+          data: data.data,
+        },
+      ];
       return (
-        <div id="key">
-          <CanvasJSChart key={"graph" + key} options={options} />
-        </div>
+        <>
+          {data.categories.length > 0 && data.data.length > 0 && (
+            <>
+              <button onClick={() => this.saveAsImage(key)}>
+                Save Chart {key}
+              </button>
+              <div id={key} style={{ backgroundColor: "white" }}>
+                <Chart
+                  options={options}
+                  series={series}
+                  type="bar"
+                  export="true"
+                  width="80%"
+                />
+              </div>
+            </>
+          )}
+        </>
       );
     });
-    return (
-      <>
-        {mapData}
 
-        <div>
-          <button onClick={() => this.showGraphs()}>Save as</button>
-        </div>
-      </>
-    );
-  }
-  // addSymbols(e){
-  // 	var suffixes = ["", "K", "M", "B"];
-  // 	var order = Math.max(Math.floor(Math.log(e.value) / Math.log(1000)), 0);
-  // 	if(order > suffixes.length - 1)
-  // 		order = suffixes.length - 1;
-  // 	var suffix = suffixes[order];
-  // 	return CanvasJS.formatNumber(e.value / Math.pow(1000, order)) + suffix;
-  // }
+  return <>{mapData}</>;
+}
 }
 export default App;
