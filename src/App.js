@@ -25,10 +25,17 @@ class App extends Component {
     this.setState({ optionsArray2: this.state.optionsArray });
   }
 
+  downloadAllImagesInPngFormat(){
+    this.state.optionsArray2.forEach((element,key) => {
+          this.saveAsImage(key)
+    });
+  }
+
   saveAsImage(id) {
     htmlToImage.toPng(document.getElementById(id))
       .then(function (dataUrl) {
-        download(dataUrl, 'my-node.png');
+        download(dataUrl, (id)+'.png');
+        
       });
   }
 
@@ -70,11 +77,18 @@ class App extends Component {
     }
   }
 
-  clickAll(key) {
-
-    var el = document.getElementsByClassName('exportPNG');
-
+  clickAll() {
+console.log("hell")
+    var el = document.getElementsByClassName('downloadaAll');
+console.log(el);
+let k=1;
     for (let i = 0; i < el.length; i++) {
+      // for(let j=1;j<60;j++){
+      //   // el[i].click();
+      //   this.saveAsImage(k);
+      //   this.wait(1000);
+      //   k++;
+      // }
       el[i].click();
     }
   }
@@ -114,7 +128,7 @@ render() {
         <>
           {data.categories.length > 0 && data.data.length > 0 && (
             <>
-              <button onClick={() => this.saveAsImage(key)}>
+              <button className="downloadaAll" onClick={() => this.saveAsImage(key)}>
                 Save Chart {key}
               </button>
               <div id={key} style={{ backgroundColor: "white" }}>
@@ -132,7 +146,10 @@ render() {
       );
     });
 
-  return <>{mapData}</>;
+  return <>  <button onClick={() => this.clickAll()}>
+  Save All Graphs
+</button>
+{mapData}</>;
 }
 }
 export default App;
